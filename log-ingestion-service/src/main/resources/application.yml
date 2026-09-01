@@ -1,0 +1,12 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: log-ingestion-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

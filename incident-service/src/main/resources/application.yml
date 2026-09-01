@@ -19,6 +19,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # Each service owns its own migration history in the shared database, so one service's
+    # migrations are never seen as "missing" by another's Flyway instance.
+    table: flyway_schema_history_incident
 
 management:
   endpoints:

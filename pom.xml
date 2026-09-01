@@ -20,9 +20,11 @@
     </parent>
 
     <modules>
+        <module>common-events</module>
         <module>incident-service</module>
         <module>log-ingestion-service</module>
         <module>ai-analysis-service</module>
+        <module>event-simulator</module>
     </modules>
 
     <properties>

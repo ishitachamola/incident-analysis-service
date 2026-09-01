@@ -1,10 +1,8 @@
 package com.incidentplatform.incident;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class IncidentServiceApplicationTests {
+public class IncidentServiceApplicationTests extends AbstractIntegrationTest {
 
     @Test
     void contextLoads() {

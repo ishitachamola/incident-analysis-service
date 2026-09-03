@@ -16,12 +16,31 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+        default_schema: incident
   flyway:
     enabled: true
     locations: classpath:db/migration
-    # Each service owns its own migration history in the shared database, so one service's
-    # migrations are never seen as "missing" by another's Flyway instance.
-    table: flyway_schema_history_incident
+    # Each service owns a schema of its own inside the shared database. That keeps migrations and
+    # table ownership isolated per service (no cross-service collisions, no startup ordering
+    # coupling) without running a separate database instance per service.
+    schemas: incident
+    default-schema: incident
+    create-schemas: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: incident-service-group
+      auto-offset-reset: earliest
+      # Deserializers are wired per listener in KafkaConfig, since this service consumes two
+      # topics carrying different payload types.
+    producer:
+      acks: all
+
+platform:
+  log-service:
+    base-url: ${LOG_SERVICE_URL:http://localhost:8082}
+  timeline:
+    lookback: 30m
 
 management:
   endpoints:

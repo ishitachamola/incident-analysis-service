@@ -37,6 +37,10 @@ public class Deployment {
     @Column(nullable = false)
     private DeploymentStatus status;
 
+    /** Set when the deployment arrived as a Kafka event; null for records created via the API. */
+    @Column(name = "event_id", unique = true, updatable = false)
+    private UUID eventId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -48,6 +52,16 @@ public class Deployment {
         this.version = version;
         this.deployedAt = deployedAt;
         this.status = status;
+    }
+
+    public Deployment(MonitoredService service, String version, Instant deployedAt, DeploymentStatus status,
+                       UUID eventId) {
+        this(service, version, deployedAt, status);
+        this.eventId = eventId;
+    }
+
+    public UUID getEventId() {
+        return eventId;
     }
 
     @PrePersist

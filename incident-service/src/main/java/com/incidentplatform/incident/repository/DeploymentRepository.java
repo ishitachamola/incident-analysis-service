@@ -8,4 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface DeploymentRepository extends JpaRepository<Deployment, UUID> {
 
     List<Deployment> findByServiceIdOrderByDeployedAtDesc(UUID serviceId);
+
+    boolean existsByEventId(UUID eventId);
+
+    List<Deployment> findByServiceIdAndDeployedAtBetweenOrderByDeployedAtAsc(
+            UUID serviceId, java.time.Instant from, java.time.Instant to);
 }

@@ -8,6 +8,7 @@ public final class KafkaTopics {
 
     public static final String LOGS = "logs-topic";
     public static final String DEPLOYMENT_EVENTS = "deployment-events";
+    public static final String INCIDENT_EVENTS = "incident-events";
 
     private KafkaTopics() {
     }

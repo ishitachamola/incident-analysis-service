@@ -8,6 +8,7 @@ import com.incidentplatform.incident.exception.ResourceNotFoundException;
 import com.incidentplatform.incident.repository.MonitoredServiceRepository;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,5 +44,22 @@ public class MonitoredServiceService {
     public MonitoredService getOrThrow(UUID id) {
         return repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found: " + id));
+    }
+
+    /**
+     * Resolves a service by name, registering it if the platform has not seen it before. Events
+     * arrive from the log stream keyed by service name, and a service must not have to be
+     * pre-registered for its telemetry to be usable.
+     */
+    public MonitoredService findOrCreateByName(String name) {
+        return repository.findByName(name).orElseGet(() -> {
+            try {
+                return repository.save(new MonitoredService(name, "Auto-registered from the event stream"));
+            } catch (DataIntegrityViolationException ex) {
+                // Another consumer registered the same service concurrently; its row is the winner.
+                return repository.findByName(name)
+                        .orElseThrow(() -> new ResourceNotFoundException("Service not found: " + name));
+            }
+        });
     }
 }

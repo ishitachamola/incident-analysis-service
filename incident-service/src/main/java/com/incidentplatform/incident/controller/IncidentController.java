@@ -7,6 +7,8 @@ import com.incidentplatform.incident.dto.IncidentResponse;
 import com.incidentplatform.incident.entity.IncidentSeverity;
 import com.incidentplatform.incident.entity.IncidentStatus;
 import com.incidentplatform.incident.service.IncidentService;
+import com.incidentplatform.incident.timeline.TimelineResponse;
+import com.incidentplatform.incident.timeline.TimelineService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -25,9 +27,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class IncidentController {
 
     private final IncidentService service;
+    private final TimelineService timelineService;
 
-    public IncidentController(IncidentService service) {
+    public IncidentController(IncidentService service, TimelineService timelineService) {
         this.service = service;
+        this.timelineService = timelineService;
     }
 
     @PostMapping
@@ -59,5 +63,10 @@ public class IncidentController {
     @GetMapping("/{id}/events")
     public List<IncidentEventResponse> findEvents(@PathVariable UUID id) {
         return service.findEvents(id);
+    }
+
+    @GetMapping("/{id}/timeline")
+    public TimelineResponse timeline(@PathVariable UUID id) {
+        return timelineService.buildTimeline(id);
     }
 }

@@ -16,12 +16,16 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+        default_schema: ingestion
   flyway:
     enabled: true
     locations: classpath:db/migration
-    # Each service owns its own migration history in the shared database, so one service's
-    # migrations are never seen as "missing" by another's Flyway instance.
-    table: flyway_schema_history_ingestion
+    # Each service owns a schema of its own inside the shared database. That keeps migrations and
+    # table ownership isolated per service (no cross-service collisions, no startup ordering
+    # coupling) without running a separate database instance per service.
+    schemas: ingestion
+    default-schema: ingestion
+    create-schemas: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -37,8 +41,17 @@ spring:
         spring.json.value.default.type: com.incidentplatform.events.LogEvent
         spring.json.use.type.headers: false
     producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # Serializers are wired in KafkaProducerConfig so they use Spring's managed ObjectMapper.
+      acks: all
+
+# Thresholds for the error-rate detection rule.
+incident-detection:
+  enabled: true
+  interval: 15s
+  window: 10m
+  min-error-count: 10
+  error-rate-threshold: 0.10
+  cooldown: 30m
 
 management:
   endpoints:

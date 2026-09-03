@@ -44,6 +44,13 @@ public class Incident {
     @Column(name = "resolved_at")
     private Instant resolvedAt;
 
+    /** Set when the incident was opened from a detection event; null for manually raised incidents. */
+    @Column(name = "event_id", unique = true, updatable = false)
+    private UUID eventId;
+
+    @Column(name = "detection_rule", updatable = false)
+    private String detectionRule;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -57,6 +64,21 @@ public class Incident {
         this.severity = severity;
         this.status = status;
         this.detectedAt = detectedAt;
+    }
+
+    public Incident(MonitoredService service, String title, IncidentSeverity severity, IncidentStatus status,
+                     Instant detectedAt, UUID eventId, String detectionRule) {
+        this(service, title, severity, status, detectedAt);
+        this.eventId = eventId;
+        this.detectionRule = detectionRule;
+    }
+
+    public UUID getEventId() {
+        return eventId;
+    }
+
+    public String getDetectionRule() {
+        return detectionRule;
     }
 
     @PrePersist

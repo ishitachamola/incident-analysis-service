@@ -4,6 +4,43 @@ server:
 spring:
   application:
     name: ai-analysis-service
+  datasource:
+    # search_path is set to this service's own schema first, with public retained after it: the
+    # pgvector extension lives in public, and the vector store's queries cast to ::vector, which
+    # only resolves if public stays on the path.
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:incident_platform}?currentSchema=ai,public
+    username: ${POSTGRES_USER:incident_platform}
+    password: ${POSTGRES_PASSWORD:dev_local_only}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # As elsewhere in the platform, this service owns a schema of its own and Flyway is the single
+    # owner of its DDL, including the vector store table.
+    schemas: ai
+    default-schema: ai
+    create-schemas: true
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      embedding:
+        options:
+          # 1536 dimensions; matches the VECTOR(1536) column defined in V1.
+          model: text-embedding-3-small
+    vectorstore:
+      pgvector:
+        schema-name: ai
+        table-name: vector_store
+        dimensions: 1536
+        distance-type: COSINE_DISTANCE
+        # Flyway creates and versions this table, so the library must not try to manage it.
+        initialize-schema: false
+
+knowledge:
+  # Resolved relative to the module directory when started with the Spring Boot Maven plugin.
+  source-path: ${KNOWLEDGE_SOURCE_PATH:../sample-data}
+  chunking:
+    max-chars: 1500
+    overlap-chars: 200
 
 management:
   endpoints:

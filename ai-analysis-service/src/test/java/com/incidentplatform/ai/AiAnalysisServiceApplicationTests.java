@@ -1,10 +1,10 @@
 package com.incidentplatform.ai;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 
-@SpringBootTest
-class AiAnalysisServiceApplicationTests {
+@Import(AbstractKnowledgeIntegrationTest.OfflineEmbeddingConfiguration.class)
+class AiAnalysisServiceApplicationTests extends AbstractKnowledgeIntegrationTest {
 
     @Test
     void contextLoads() {

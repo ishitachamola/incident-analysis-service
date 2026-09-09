@@ -18,10 +18,15 @@ import org.springframework.ai.embedding.EmbeddingResponse;
  * enough to verify what these tests are actually about: that chunking, storage, metadata filtering
  * and nearest-neighbour ranking are wired together correctly. Judging genuine semantic quality
  * requires the real model and belongs in the evaluation milestone.
+ *
+ * <p>It is used even though the production embedding model now also runs locally, because that
+ * model downloads its ONNX weights on first use. Keeping the tests on this stand-in leaves them
+ * fast and free of any network dependency.
  */
 public class HashingEmbeddingModel implements EmbeddingModel {
 
-    private static final int DIMENSIONS = 1536;
+    /** Matches the local embedding model's dimension, and so the vector column's. */
+    private static final int DIMENSIONS = 384;
 
     @Override
     public float[] embed(String text) {

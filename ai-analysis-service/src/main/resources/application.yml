@@ -20,17 +20,24 @@ spring:
     default-schema: ai
     create-schemas: true
   ai:
+    model:
+      # Embeddings are produced locally and generation is delegated to the hosted model. Splitting
+      # them this way means ingestion costs nothing and consumes no request quota, leaving the
+      # hosted model's budget for generation, where quality matters most.
+      embedding: transformers
+      chat: openai
     openai:
       api-key: ${OPENAI_API_KEY}
-      embedding:
+      chat:
         options:
-          # 1536 dimensions; matches the VECTOR(1536) column defined in V1.
-          model: text-embedding-3-small
+          model: ${OPENAI_CHAT_MODEL:gpt-5.4-mini}
+          temperature: 0.1
     vectorstore:
       pgvector:
         schema-name: ai
         table-name: vector_store
-        dimensions: 1536
+        # all-MiniLM-L6-v2 produces 384 dimensions; matches the column set in V2.
+        dimensions: 384
         distance-type: COSINE_DISTANCE
         # Flyway creates and versions this table, so the library must not try to manage it.
         initialize-schema: false

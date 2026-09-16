@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@Import(AbstractKnowledgeIntegrationTest.OfflineEmbeddingConfiguration.class)
+@Import(AbstractKnowledgeIntegrationTest.OfflineModelConfiguration.class)
 class KnowledgeIngestionIntegrationTest extends AbstractKnowledgeIntegrationTest {
 
     /** The real knowledge base, so the tests exercise the documents the platform actually ships. */

@@ -19,6 +19,12 @@ spring:
     schemas: ai
     default-schema: ai
     create-schemas: true
+  http:
+    client:
+      # Bounds every outbound HTTP call, including model requests, so a hung provider cannot hold the
+      # single model-call slot indefinitely.
+      connect-timeout: 5s
+      read-timeout: 90s
   ai:
     model:
       # Embeddings are produced locally and generation is delegated to the hosted model. Splitting
@@ -26,12 +32,28 @@ spring:
       # hosted model's budget for generation, where quality matters most.
       embedding: transformers
       chat: openai
+      # The OpenAI client also creates image, audio and moderation clients by default. They would
+      # point at the Gemini endpoint and are never used, so they are switched off entirely.
+      image: none
+      audio:
+        speech: none
+        transcription: none
+      moderation: none
+    retry:
+      # Spring AI retries a failing call up to 10 times by default. Against a free tier allowing 20
+      # requests a day, one outage could consume half of it, so each call gets exactly one attempt.
+      max-attempts: 1
+      on-client-errors: false
     openai:
-      api-key: ${OPENAI_API_KEY}
+      # Gemini is reached through its OpenAI-compatible endpoint, so the OpenAI client works unchanged.
+      # A placeholder default lets the service start without a key; the call guard then refuses
+      # analysis requests instead of sending requests that are certain to fail.
+      api-key: ${GEMINI_API_KEY:not-configured}
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai
       chat:
+        completions-path: /chat/completions
         options:
-          model: ${OPENAI_CHAT_MODEL:gpt-5.4-mini}
-          temperature: 0.1
+          model: ${AI_CHAT_MODEL:gemini-3.5-flash-lite}
     vectorstore:
       pgvector:
         schema-name: ai
@@ -41,6 +63,45 @@ spring:
         distance-type: COSINE_DISTANCE
         # Flyway creates and versions this table, so the library must not try to manage it.
         initialize-schema: false
+
+ai:
+  llm:
+    enabled: ${AI_LLM_ENABLED:true}
+    model: ${AI_CHAT_MODEL:gemini-3.5-flash-lite}
+    # Includes a thinking model's reasoning tokens. A response cut off at this cap fails the analysis
+    # rather than being repaired, since a retry at the same cap would be cut off again.
+    max-output-tokens: 8192
+    temperature: 0.2
+    max-concurrent-calls: 1
+    max-repair-attempts: 1
+    # Gemini's daily quotas reset at midnight Pacific time.
+    quota-zone: America/Los_Angeles
+    # Any model without its own entry gets these deliberately small limits.
+    default-limits:
+      requests-per-minute: 2
+      requests-per-day: 10
+    # Kept below the free tier's own limits (Flash Lite 15/min & 500/day, Flash 5/min & 20/day) so the
+    # service refuses a request itself before the provider would. Keys containing dots must be
+    # bracketed, otherwise Spring splits them into nested properties.
+    models:
+      "[gemini-3.5-flash-lite]":
+        requests-per-minute: 10
+        requests-per-day: 400
+      "[gemini-3.8-flash]":
+        requests-per-minute: 4
+        requests-per-day: 15
+  analysis:
+    max-timeline-entries: 40
+    max-entry-summary-chars: 300
+    max-document-chars: 2500
+    # About 6,000 tokens of evidence per call: far below the 250K tokens-per-minute allowance.
+    max-evidence-chars: 24000
+    runbook-top-k: 3
+    incident-top-k: 4
+
+platform:
+  incident-service:
+    base-url: ${INCIDENT_SERVICE_URL:http://localhost:8081}
 
 knowledge:
   # Resolved relative to the module directory when started with the Spring Boot Maven plugin.

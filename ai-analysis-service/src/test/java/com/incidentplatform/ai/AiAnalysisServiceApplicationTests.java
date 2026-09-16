@@ -3,7 +3,7 @@ package com.incidentplatform.ai;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Import;
 
-@Import(AbstractKnowledgeIntegrationTest.OfflineEmbeddingConfiguration.class)
+@Import(AbstractKnowledgeIntegrationTest.OfflineModelConfiguration.class)
 class AiAnalysisServiceApplicationTests extends AbstractKnowledgeIntegrationTest {
 
     @Test

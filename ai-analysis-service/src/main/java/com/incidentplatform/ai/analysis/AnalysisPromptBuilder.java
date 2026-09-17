@@ -136,7 +136,7 @@ public class AnalysisPromptBuilder {
     }
 
     /** Neutralises markup in untrusted evidence so it cannot close or open a section. */
-    static String escape(String value) {
+    public static String escape(String value) {
         if (value == null) {
             return "";
         }

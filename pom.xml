@@ -21,6 +21,7 @@
 
     <modules>
         <module>common-events</module>
+        <module>common-security</module>
         <module>incident-service</module>
         <module>log-ingestion-service</module>
         <module>ai-analysis-service</module>

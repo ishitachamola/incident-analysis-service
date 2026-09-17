@@ -102,6 +102,9 @@ ai:
 platform:
   incident-service:
     base-url: ${INCIDENT_SERVICE_URL:http://localhost:8081}
+  jwt:
+    secret: ${PLATFORM_JWT_SECRET:local-development-signing-secret-change-me}
+    issuer: incident-platform
 
 knowledge:
   # Resolved relative to the module directory when started with the Spring Boot Maven plugin.

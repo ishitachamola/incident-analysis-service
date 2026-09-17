@@ -59,6 +59,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Malformed request: check the incident id and parameters", request);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidInput(IllegalArgumentException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, HttpServletRequest request) {
         log.error("Unexpected error on {}", request.getRequestURI(), ex);

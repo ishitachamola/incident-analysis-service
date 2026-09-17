@@ -1,5 +1,7 @@
 package com.incidentplatform.incident.client;
 
+import com.incidentplatform.security.ServiceTokenInterceptor;
+import com.incidentplatform.security.ServiceTokenProvider;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -23,8 +25,12 @@ public class LogClient {
 
     private final RestClient restClient;
 
-    public LogClient(RestClient.Builder builder, @Value("${platform.log-service.base-url}") String baseUrl) {
-        this.restClient = builder.baseUrl(baseUrl).build();
+    public LogClient(RestClient.Builder builder, ServiceTokenProvider serviceTokenProvider,
+                     @Value("${platform.log-service.base-url}") String baseUrl) {
+        this.restClient = builder
+                .baseUrl(baseUrl)
+                .requestInterceptor(new ServiceTokenInterceptor(serviceTokenProvider))
+                .build();
     }
 
     /**

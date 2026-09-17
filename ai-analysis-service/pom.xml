@@ -28,6 +28,11 @@
             <artifactId>common-events</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.incidentplatform</groupId>
+            <artifactId>common-security</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- Chat/generation only; embeddings come from the local model below. -->
         <dependency>
             <groupId>org.springframework.ai</groupId>

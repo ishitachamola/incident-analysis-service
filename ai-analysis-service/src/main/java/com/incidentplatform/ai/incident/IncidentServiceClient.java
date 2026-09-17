@@ -1,5 +1,7 @@
 package com.incidentplatform.ai.incident;
 
+import com.incidentplatform.security.ServiceTokenInterceptor;
+import com.incidentplatform.security.ServiceTokenProvider;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -20,9 +22,12 @@ public class IncidentServiceClient {
 
     private final RestClient restClient;
 
-    public IncidentServiceClient(RestClient.Builder builder,
+    public IncidentServiceClient(RestClient.Builder builder, ServiceTokenProvider serviceTokenProvider,
                                   @Value("${platform.incident-service.base-url}") String baseUrl) {
-        this.restClient = builder.baseUrl(baseUrl).build();
+        this.restClient = builder
+                .baseUrl(baseUrl)
+                .requestInterceptor(new ServiceTokenInterceptor(serviceTokenProvider))
+                .build();
     }
 
     public IncidentSummary getIncident(UUID incidentId) {

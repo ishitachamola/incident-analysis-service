@@ -58,3 +58,8 @@ management:
     web:
       exposure:
         include: health,info,metrics
+
+platform:
+  jwt:
+    secret: ${PLATFORM_JWT_SECRET:local-development-signing-secret-change-me}
+    issuer: incident-platform

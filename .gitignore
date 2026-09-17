@@ -50,3 +50,8 @@ build/
 .DS_Store
 ### Claude Code local settings ###
 .claude/settings.local.json
+
+### Angular build output / deps ###
+frontend/incident-ui/node_modules/
+frontend/incident-ui/dist/
+frontend/incident-ui/.angular/

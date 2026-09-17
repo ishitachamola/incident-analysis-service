@@ -1,0 +1,17 @@
+# One image definition for every Spring Boot service; SERVICE selects which jar to package.
+# The jar is expected to be built already (./mvnw package), which keeps image builds fast and
+# avoids re-resolving dependencies inside Docker.
+FROM eclipse-temurin:21-jre-alpine
+
+ARG SERVICE
+WORKDIR /app
+
+COPY ${SERVICE}/target/${SERVICE}-*.jar /app/application.jar
+
+# Containers get a modest heap by default so the whole platform fits on a developer laptop.
+ENV JAVA_OPTS="-Xmx320m"
+
+RUN addgroup -S platform && adduser -S platform -G platform
+USER platform
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/application.jar"]

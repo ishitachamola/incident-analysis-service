@@ -1,0 +1,187 @@
+<a routerLink="/incidents" class="back">← All incidents</a>
+
+@if (incident(); as inc) {
+  <header class="page-head">
+    <div>
+      <h1>{{ inc.title }}</h1>
+      <p class="muted mono">{{ inc.serviceName }} · detected {{ inc.detectedAt | date: 'dd MMM yyyy HH:mm' }}</p>
+    </div>
+    <div class="head-chips">
+      <span class="chip sev-{{ inc.severity.toLowerCase() }}">{{ inc.severity }}</span>
+      <span class="chip status">{{ inc.status }}</span>
+    </div>
+  </header>
+}
+
+@if (error()) {
+  <div class="card banner-error">{{ error() }}</div>
+}
+
+<div class="columns">
+  <section class="card">
+    <h2>Timeline</h2>
+    @if (timeline(); as tl) {
+      @if (!tl.logsAvailable) {
+        <p class="warn">Log evidence was unavailable, so this timeline may be incomplete.</p>
+      }
+      <ol class="timeline">
+        @for (entry of tl.entries; track entry.sourceRef + entry.timestamp) {
+          <li class="entry type-{{ entry.type.toLowerCase() }}">
+            <span class="time mono">{{ entry.timestamp | date: 'HH:mm:ss' }}</span>
+            <span class="body">
+              @if (entry.level) {
+                <span class="chip level-{{ entry.level.toLowerCase() }}">{{ entry.level }}</span>
+              } @else {
+                <span class="chip kind">{{ entry.type }}</span>
+              }
+              {{ entry.summary }}
+              <span class="ref mono">{{ entry.sourceRef }}</span>
+            </span>
+          </li>
+        }
+      </ol>
+    } @else {
+      <p class="muted">Loading timeline…</p>
+    }
+  </section>
+
+  <section class="card">
+    <div class="section-head">
+      <h2>AI analysis</h2>
+      @if (auth.canAnalyse()) {
+        <div class="actions">
+          <button (click)="analyse(false)" [disabled]="analysing()">
+            {{ analysing() ? 'Analysing…' : analysis() ? 'Re-check' : 'Analyse incident' }}
+          </button>
+          @if (analysis()) {
+            <button class="ghost" (click)="analyse(true)" [disabled]="analysing()"
+                    title="Forces a new model call even if the evidence is unchanged">
+              Force refresh
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    @if (analysis(); as response) {
+      <div class="verdict status-{{ response.analysis.status.toLowerCase() }}">
+        <span class="verdict-label">
+          {{ response.analysis.status === 'ROOT_CAUSE_IDENTIFIED' ? 'Likely root cause' : 'Insufficient evidence' }}
+        </span>
+        <p class="root-cause">{{ response.analysis.rootCause }}</p>
+
+        <div class="confidence">
+          <div class="bar"><span [style.width.%]="confidencePercent()"></span></div>
+          <span class="mono">{{ confidencePercent() }}% confidence</span>
+        </div>
+      </div>
+
+      <h3>Evidence</h3>
+      <ul class="claims">
+        @for (claim of response.analysis.evidence; track claim.claim) {
+          <li>
+            <span class="tick" [class.unverified]="!claim.verified">{{ claim.verified ? '✓' : '!' }}</span>
+            <span>
+              {{ claim.claim }}
+              @for (ref of claim.sourceRefs; track ref) {
+                <span class="cite mono" title="Cited evidence">{{ ref }}</span>
+              }
+              @if (!claim.verified) {
+                <span class="unverified-note">no supporting evidence found</span>
+              }
+            </span>
+          </li>
+        }
+      </ul>
+
+      @if (response.analysis.deploymentCorrelation; as dep) {
+        <h3>Deployment correlation</h3>
+        <p class="dep">
+          @if (dep.deploymentInWindow) {
+            <span class="mono">{{ dep.deploymentSummary }}</span>,
+            {{ dep.minutesBeforeDetection }} min before detection.
+          }
+          {{ dep.note }}
+        </p>
+      }
+
+      @if (response.analysis.alternativeHypotheses.length) {
+        <h3>Alternatives considered</h3>
+        <ul class="alts">
+          @for (alt of response.analysis.alternativeHypotheses; track alt.hypothesis) {
+            <li>
+              <span class="chip assess">{{ alt.assessment.replace('_', ' ') }}</span>
+              <strong>{{ alt.hypothesis }}</strong> — {{ alt.reason }}
+            </li>
+          }
+        </ul>
+      }
+
+      @if (response.analysis.recommendations.length) {
+        <h3>Recommended actions</h3>
+        <ol class="recs">
+          @for (rec of response.analysis.recommendations; track rec) { <li>{{ rec }}</li> }
+        </ol>
+      }
+
+      @if (response.analysis.relatedIncidents.length) {
+        <h3>Related past incidents</h3>
+        <ul class="related">
+          @for (rel of response.analysis.relatedIncidents; track rel.sourceRef) {
+            <li><strong>{{ rel.title }}</strong><span class="muted"> — {{ rel.relevance }}</span></li>
+          }
+        </ul>
+      }
+
+      <div class="provenance">
+        <span>{{ response.model }}</span>
+        <span>{{ response.analysis.grounding.claimsVerified }}/{{ response.analysis.grounding.claimsTotal }} claims verified</span>
+        @if (response.analysis.grounding.invalidCitationsRemoved > 0) {
+          <span class="flag">{{ response.analysis.grounding.invalidCitationsRemoved }} invalid citation(s) removed</span>
+        }
+        <span>{{ response.latencyMs | number }} ms</span>
+        <span>{{ response.cached ? 'served from storage (no model call)' : response.modelCalls + ' model call(s)' }}</span>
+      </div>
+
+      @for (note of response.analysis.grounding.notes; track note) {
+        <p class="grounding-note">{{ note }}</p>
+      }
+    } @else {
+      <p class="muted">
+        No analysis yet.
+        @if (!auth.canAnalyse()) { Your role can read analyses but not run one. }
+      </p>
+    }
+  </section>
+</div>
+
+<section class="card chat">
+  <h2>Ask a follow-up</h2>
+  @if (chat().length === 0) {
+    <p class="muted">Ask about the evidence, for example “Was there a deployment before the errors started?”</p>
+  }
+  <div class="messages">
+    @for (message of chat(); track message.id) {
+      <div class="message {{ message.role.toLowerCase() }}">
+        <p>{{ message.content }}</p>
+        @if (message.sources.length) {
+          <div class="sources">
+            @for (ref of message.sources; track ref) { <span class="cite mono">{{ ref }}</span> }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (auth.canAnalyse()) {
+    <form class="composer" (ngSubmit)="ask()">
+      <input name="question" [(ngModel)]="question" placeholder="Ask about this incident…"
+             [disabled]="asking()" />
+      <button type="submit" [disabled]="asking() || !question.trim()">
+        {{ asking() ? 'Thinking…' : 'Ask' }}
+      </button>
+    </form>
+  } @else {
+    <p class="muted">Asking a question spends a model call, so it requires the SRE role.</p>
+  }
+</section>

@@ -48,6 +48,99 @@ services:
       timeout: 10s
       retries: 10
 
+  # ---------------------------------------------------------------------------------------------
+  # Application services, under the "apps" profile so `docker compose up -d` starts only the
+  # infrastructure by default. That matters on a small machine: infrastructure alone is light, while
+  # the whole platform wants roughly 2 GB.
+  #
+  # Build the jars and the UI bundle first, then start them:
+  #   ./mvnw package -DskipTests
+  #   (cd frontend/incident-ui && npm ci && npm run build)
+  #   docker compose --profile apps up -d --build
+  # ---------------------------------------------------------------------------------------------
+
+  incident-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE: incident-service
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-incident_platform}
+      POSTGRES_USER: ${POSTGRES_USER:-incident_platform}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-local-development-signing-secret-change-me}
+      LOG_SERVICE_URL: http://log-ingestion-service:8082
+    ports: ["8081:8081"]
+
+  log-ingestion-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE: log-ingestion-service
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-incident_platform}
+      POSTGRES_USER: ${POSTGRES_USER:-incident_platform}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-local-development-signing-secret-change-me}
+    ports: ["8082:8082"]
+
+  ai-analysis-service:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE: ai-analysis-service
+    depends_on:
+      postgres: {condition: service_healthy}
+    environment:
+      # The vector store lives in this service's own schema, with public kept on the search path so
+      # the pgvector extension's types still resolve.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-incident_platform}?currentSchema=ai,public
+      POSTGRES_USER: ${POSTGRES_USER:-incident_platform}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-local-development-signing-secret-change-me}
+      INCIDENT_SERVICE_URL: http://incident-service:8081
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-not-configured}
+      AI_CHAT_MODEL: ${AI_CHAT_MODEL:-gemini-3.5-flash-lite}
+      KNOWLEDGE_SOURCE_PATH: /app/sample-data
+      JAVA_OPTS: -Xmx480m
+    volumes:
+      - ./sample-data:/app/sample-data:ro
+    ports: ["8083:8083"]
+
+  event-simulator:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.service
+      args:
+        SERVICE: event-simulator
+    depends_on:
+      kafka: {condition: service_healthy}
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports: ["8084:8084"]
+
+  frontend:
+    profiles: [apps]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    ports: ["8085:80"]
+
 volumes:
   postgres-data:
   kafka-data:

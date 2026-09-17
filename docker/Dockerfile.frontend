@@ -1,0 +1,8 @@
+# Serves the built Angular bundle. The build happens outside the image (npm run build) so this stays
+# small and fast; CI builds the bundle before building the image.
+FROM nginx:1.27-alpine
+
+COPY frontend/incident-ui/dist/incident-ui/browser /usr/share/nginx/html
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80

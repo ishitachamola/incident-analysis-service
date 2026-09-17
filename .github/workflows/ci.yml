@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend build and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      # The integration tests run real Postgres, pgvector and Kafka containers through
+      # Testcontainers. They never call a hosted model: the chat model is stubbed and the endpoint
+      # points at an unreachable address, so CI needs no API key and can never spend quota.
+      - name: Build and test
+        run: ./mvnw --batch-mode verify
+
+      - name: Publish test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: '**/target/surefire-reports/*.xml'
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/incident-ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend/incident-ui
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend/incident-ui
+        run: npm run build
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    needs: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      # Images are built from the packaged jars, so the jars are produced once and reused.
+      - name: Package services
+        run: ./mvnw --batch-mode package -DskipTests
+
+      - name: Build service images
+        run: |
+          for service in incident-service log-ingestion-service ai-analysis-service event-simulator; do
+            docker build -t "incident-platform/${service}:ci" \
+              --build-arg SERVICE="${service}" -f docker/Dockerfile.service .
+          done
